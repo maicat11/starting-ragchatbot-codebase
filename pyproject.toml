@@ -3,13 +3,15 @@ name = "starting-codebase"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "chromadb==1.0.15",
     "anthropic==0.58.2",
+    "torch>=2.0.0,<2.3.0",
     "sentence-transformers==5.0.0",
     "fastapi==0.116.1",
     "uvicorn==0.35.0",
     "python-multipart==0.0.20",
     "python-dotenv==1.1.1",
+    "numpy<2",
 ]
