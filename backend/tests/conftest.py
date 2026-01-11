@@ -157,3 +157,79 @@ def test_config():
         CHROMA_PATH = None  # Will be set per test
 
     return TestConfig()
+
+
+# API Testing Fixtures
+
+@pytest.fixture
+def mock_rag_system_for_api():
+    """Create fully mocked RAG system for API testing"""
+    mock_rag = Mock()
+
+    # Mock query method
+    mock_rag.query.return_value = (
+        "Sample answer from RAG system.",
+        [{"text": "Introduction to Python - Lesson 1",
+          "url": "https://example.com/lesson1"}]
+    )
+
+    # Mock session manager
+    mock_rag.session_manager = Mock()
+    mock_rag.session_manager.create_session.return_value = "test-session-123"
+
+    # Mock get_course_analytics
+    mock_rag.get_course_analytics.return_value = {
+        "total_courses": 2,
+        "course_titles": ["Introduction to Python", "Advanced Python"]
+    }
+
+    return mock_rag
+
+
+@pytest.fixture
+def test_app(mock_rag_system_for_api):
+    """Create FastAPI app with mocked RAG system, no startup events"""
+    from unittest.mock import patch
+
+    with patch('app.rag_system', mock_rag_system_for_api):
+        import app as app_module
+        # Disable startup events to prevent loading ../docs during tests
+        app_module.app.router.on_startup = []
+        yield app_module.app
+
+
+@pytest.fixture
+def test_client(test_app):
+    """Create TestClient for API testing"""
+    from fastapi.testclient import TestClient
+    return TestClient(test_app)
+
+
+@pytest.fixture
+def sample_query_request():
+    """Sample QueryRequest data for testing"""
+    return {
+        "query": "What is Python?",
+        "session_id": "test-session-123"
+    }
+
+
+@pytest.fixture
+def sample_query_response():
+    """Sample QueryResponse data for testing"""
+    return {
+        "answer": "Python is a high-level programming language.",
+        "sources": [
+            {"text": "Introduction to Python - Lesson 1", "url": "https://example.com/lesson1"}
+        ],
+        "session_id": "test-session-123"
+    }
+
+
+@pytest.fixture
+def sample_course_stats():
+    """Sample CourseStats data for testing"""
+    return {
+        "total_courses": 2,
+        "course_titles": ["Introduction to Python", "Advanced Python"]
+    }
