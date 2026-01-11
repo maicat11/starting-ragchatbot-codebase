@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Install dependencies:**
 ```bash
 uv sync
+# Install with dev dependencies (includes code quality tools):
+uv sync --extra dev
 ```
 
 **Run the application:**
@@ -19,6 +21,42 @@ cd backend && uv run uvicorn app:app --reload --port 8000
 **Access points:**
 - Web Interface: http://localhost:8000
 - API Documentation: http://localhost:8000/docs
+
+## Code Quality Tools
+
+This project uses several code quality tools to maintain consistent, high-quality code:
+
+**Format code:**
+```bash
+./scripts/format.sh
+# Runs Black (code formatter) and isort (import sorter)
+```
+
+**Run linter:**
+```bash
+./scripts/lint.sh
+# Runs flake8 to check code style
+```
+
+**Type check:**
+```bash
+./scripts/type-check.sh
+# Runs mypy for static type checking
+```
+
+**Run all quality checks:**
+```bash
+./scripts/quality-check.sh
+# Runs formatting check, linting, and type checking
+```
+
+### Code Quality Configuration
+
+- **Black**: Line length 88, Python 3.10+ targets
+- **isort**: Black-compatible profile for import sorting
+- **flake8**: Max line length 88, complexity limit 10
+- **mypy**: Relaxed mode focused on catching real errors
+- Configuration: See `pyproject.toml` and `.flake8`
 
 ## Environment Setup
 

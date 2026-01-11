@@ -1,5 +1,7 @@
+from typing import List, Optional
+
 import anthropic
-from typing import List, Optional, Dict, Any
+
 
 class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
@@ -37,22 +39,21 @@ All responses must be:
 4. **Example-supported** - Include relevant examples when they aid understanding
 Provide only the direct answer to what was asked.
 """
-    
+
     def __init__(self, api_key: str, model: str):
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
-        
+
         # Pre-build base API parameters
-        self.base_params = {
-            "model": self.model,
-            "temperature": 0,
-            "max_tokens": 800
-        }
-    
-    def generate_response(self, query: str,
-                         conversation_history: Optional[str] = None,
-                         tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+        self.base_params = {"model": self.model, "temperature": 0, "max_tokens": 800}
+
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: Optional[str] = None,
+        tools: Optional[List] = None,
+        tool_manager=None,
+    ) -> str:
         """
         Generate AI response with optional multi-round tool usage and conversation context.
 
@@ -82,7 +83,7 @@ Provide only the direct answer to what was asked.
             api_params = {
                 **self.base_params,
                 "messages": messages,
-                "system": system_content
+                "system": system_content,
             }
 
             # Add tools if available
@@ -108,19 +109,29 @@ Provide only the direct answer to what was asked.
                 continue
 
             # Natural termination: no tool use, return response
-            return response.content[0].text if response.content else "No response generated"
+            return (
+                response.content[0].text
+                if response.content
+                else "No response generated"
+            )
 
         # Max rounds reached - make final call without tools to force answer
         final_params = {
             **self.base_params,
             "messages": messages,
-            "system": system_content
+            "system": system_content,
         }
 
         final_response = self.client.messages.create(**final_params)
-        return final_response.content[0].text if final_response.content else "No response generated"
-    
-    def _execute_and_append_tools(self, response, messages: List, tool_manager) -> Optional[str]:
+        return (
+            final_response.content[0].text
+            if final_response.content
+            else "No response generated"
+        )
+
+    def _execute_and_append_tools(
+        self, response, messages: List, tool_manager
+    ) -> Optional[str]:
         """
         Execute tool calls and append results to message history in-place.
 
@@ -146,26 +157,29 @@ Provide only the direct answer to what was asked.
             if content_block.type == "tool_use":
                 try:
                     tool_result = tool_manager.execute_tool(
-                        content_block.name,
-                        **content_block.input
+                        content_block.name, **content_block.input
                     )
 
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": content_block.id,
-                        "content": tool_result
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": tool_result,
+                        }
+                    )
                 except Exception as e:
                     # Tool execution error - return error message
                     error_msg = f"Tool execution error: {content_block.name} failed with {str(e)}"
 
                     # Add error result to messages for context
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": content_block.id,
-                        "content": error_msg,
-                        "is_error": True
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": error_msg,
+                            "is_error": True,
+                        }
+                    )
                     messages.append({"role": "user", "content": tool_results})
 
                     # Return error to terminate loop

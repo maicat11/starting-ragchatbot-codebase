@@ -8,15 +8,17 @@ These tests verify:
 4. Session management
 5. Error handling in the complete flow
 """
-import pytest
-from unittest.mock import Mock, MagicMock, patch
-import sys
+
 import os
+import sys
+from unittest.mock import Mock, patch
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rag_system import RAGSystem
-from vector_store import SearchResults
+from rag_system import RAGSystem  # noqa: E402
+from vector_store import SearchResults  # noqa: E402
 
 
 class TestRAGSystemQueryHandling:
@@ -27,19 +29,25 @@ class TestRAGSystemQueryHandling:
         """Create a RAG system with mocked components"""
         test_config.CHROMA_PATH = temp_chroma_path
 
-        with patch('rag_system.VectorStore') as MockVectorStore, \
-             patch('rag_system.AIGenerator') as MockAIGenerator, \
-             patch('rag_system.DocumentProcessor') as MockDocProcessor:
+        with (
+            patch("rag_system.VectorStore") as MockVectorStore,
+            patch("rag_system.AIGenerator") as MockAIGenerator,
+            patch("rag_system.DocumentProcessor") as MockDocProcessor,
+        ):
 
             # Setup vector store mock
             mock_vector_store = Mock()
             mock_vector_store.search.return_value = SearchResults(
                 documents=["Python is a programming language"],
-                metadata=[{"course_title": "Introduction to Python", "lesson_number": 1}],
+                metadata=[
+                    {"course_title": "Introduction to Python", "lesson_number": 1}
+                ],
                 distances=[0.3],
-                error=None
+                error=None,
             )
-            mock_vector_store.get_lesson_link.return_value = "https://example.com/lesson1"
+            mock_vector_store.get_lesson_link.return_value = (
+                "https://example.com/lesson1"
+            )
             MockVectorStore.return_value = mock_vector_store
 
             # Setup AI generator mock
@@ -77,9 +85,14 @@ class TestRAGSystemQueryHandling:
         rag, mock_vector_store, mock_ai_gen = mock_rag_components
 
         # Setup tool manager to return sources
-        rag.tool_manager.get_last_sources = Mock(return_value=[
-            {"text": "Introduction to Python - Lesson 1", "url": "https://example.com/lesson1"}
-        ])
+        rag.tool_manager.get_last_sources = Mock(
+            return_value=[
+                {
+                    "text": "Introduction to Python - Lesson 1",
+                    "url": "https://example.com/lesson1",
+                }
+            ]
+        )
 
         # Execute
         response, sources = rag.query("What is Python?")
@@ -134,7 +147,9 @@ class TestRAGSystemQueryHandling:
         rag, mock_vector_store, mock_ai_gen = mock_rag_components
 
         # Setup mock for sources
-        rag.tool_manager.get_last_sources = Mock(return_value=[{"text": "test", "url": "http://test.com"}])
+        rag.tool_manager.get_last_sources = Mock(
+            return_value=[{"text": "test", "url": "http://test.com"}]
+        )
         rag.tool_manager.reset_sources = Mock()
 
         # Execute
@@ -163,7 +178,9 @@ class TestRAGSystemQueryHandling:
 class TestRAGSystemWithRealVectorStore:
     """Test RAG system with actual vector store (tests MAX_RESULTS bug)"""
 
-    def test_query_with_zero_max_results_config(self, test_config, temp_chroma_path, sample_course, sample_course_chunks):
+    def test_query_with_zero_max_results_config(
+        self, test_config, temp_chroma_path, sample_course, sample_course_chunks
+    ):
         """
         CRITICAL TEST: Test that demonstrates the MAX_RESULTS=0 bug
         This test should FAIL with current config.py settings
@@ -180,12 +197,16 @@ class TestRAGSystemWithRealVectorStore:
         rag.vector_store.add_course_content(sample_course_chunks)
 
         # Mock AI generator to isolate vector store behavior
-        with patch.object(rag.ai_generator, 'generate_response') as mock_gen:
+        with patch.object(rag.ai_generator, "generate_response") as mock_gen:
             # Setup mock to simulate tool execution
-            def mock_generate(query, conversation_history=None, tools=None, tool_manager=None):
+            def mock_generate(
+                query, conversation_history=None, tools=None, tool_manager=None
+            ):
                 if tool_manager:
                     # Simulate AI calling the search tool
-                    result = tool_manager.execute_tool("search_course_content", query="Python")
+                    result = tool_manager.execute_tool(
+                        "search_course_content", query="Python"
+                    )
                     return f"Response based on: {result}"
                 return "No tools used"
 
@@ -196,11 +217,17 @@ class TestRAGSystemWithRealVectorStore:
 
             # This assertion should FAIL if MAX_RESULTS=0
             # Because vector store will return 0 results
-            assert "No relevant content found" not in response or test_config.MAX_RESULTS == 0,\
-                f"Search returned no results when MAX_RESULTS={test_config.MAX_RESULTS}. " \
+            assert (
+                "No relevant content found" not in response
+                or test_config.MAX_RESULTS == 0
+            ), (
+                f"Search returned no results when MAX_RESULTS={test_config.MAX_RESULTS}. "
                 f"This indicates the MAX_RESULTS=0 bug!"
+            )
 
-    def test_query_with_proper_max_results_config(self, test_config, temp_chroma_path, sample_course, sample_course_chunks):
+    def test_query_with_proper_max_results_config(
+        self, test_config, temp_chroma_path, sample_course, sample_course_chunks
+    ):
         """
         Test that queries work correctly with proper MAX_RESULTS configuration
         This test should PASS showing the correct behavior
@@ -225,7 +252,9 @@ class TestRAGSystemWithRealVectorStore:
         # Should contain content from our sample chunks
         assert "Python" in result or "programming" in result.lower()
 
-    def test_vector_store_search_respects_max_results(self, test_config, temp_chroma_path, sample_course, sample_course_chunks):
+    def test_vector_store_search_respects_max_results(
+        self, test_config, temp_chroma_path, sample_course, sample_course_chunks
+    ):
         """Test that vector store respects MAX_RESULTS configuration"""
         test_config.CHROMA_PATH = temp_chroma_path
 
@@ -238,8 +267,9 @@ class TestRAGSystemWithRealVectorStore:
         results_broken = rag_broken.vector_store.search(query="Python")
 
         # With MAX_RESULTS=0, should get empty results
-        assert results_broken.is_empty(), \
-            "Expected empty results with MAX_RESULTS=0, but got results!"
+        assert (
+            results_broken.is_empty()
+        ), "Expected empty results with MAX_RESULTS=0, but got results!"
 
         # Test with proper MAX_RESULTS
         test_config.MAX_RESULTS = 5
@@ -251,8 +281,9 @@ class TestRAGSystemWithRealVectorStore:
         results_working = rag_working.vector_store.search(query="Python")
 
         # With proper MAX_RESULTS, should get results
-        assert not results_working.is_empty(), \
-            "Expected results with MAX_RESULTS=5, but got empty!"
+        assert (
+            not results_working.is_empty()
+        ), "Expected results with MAX_RESULTS=5, but got empty!"
 
 
 class TestRAGSystemCourseManagement:
@@ -284,9 +315,11 @@ class TestRAGSystemErrorHandling:
         """Create a RAG system with mocked components for error testing"""
         test_config.CHROMA_PATH = temp_chroma_path + "_errors"
 
-        with patch('rag_system.VectorStore') as MockVectorStore, \
-             patch('rag_system.AIGenerator') as MockAIGenerator, \
-             patch('rag_system.DocumentProcessor') as MockDocProcessor:
+        with (
+            patch("rag_system.VectorStore") as MockVectorStore,
+            patch("rag_system.AIGenerator") as MockAIGenerator,
+            patch("rag_system.DocumentProcessor") as MockDocProcessor,
+        ):
 
             # Setup vector store mock
             mock_vector_store = Mock()
@@ -294,7 +327,7 @@ class TestRAGSystemErrorHandling:
                 documents=["Test content"],
                 metadata=[{"course_title": "Test Course", "lesson_number": 1}],
                 distances=[0.3],
-                error=None
+                error=None,
             )
             MockVectorStore.return_value = mock_vector_store
 
@@ -330,9 +363,13 @@ class TestRAGSystemErrorHandling:
         mock_vector_store.search.return_value = SearchResults.empty("Database error")
 
         # Mock AI to simulate using the tool
-        def mock_generate(query, conversation_history=None, tools=None, tool_manager=None):
+        def mock_generate(
+            query, conversation_history=None, tools=None, tool_manager=None
+        ):
             if tool_manager:
-                result = tool_manager.execute_tool("search_course_content", query="test")
+                result = tool_manager.execute_tool(
+                    "search_course_content", query="test"
+                )
                 return f"Search result: {result}"
             return "No search performed"
 
@@ -348,7 +385,9 @@ class TestRAGSystemErrorHandling:
 class TestRAGSystemSequentialToolCalling:
     """Integration tests for sequential tool calling through RAG system"""
 
-    def test_rag_sequential_tool_calling_with_real_vector_store(self, test_config, temp_chroma_path, sample_course, sample_course_chunks):
+    def test_rag_sequential_tool_calling_with_real_vector_store(
+        self, test_config, temp_chroma_path, sample_course, sample_course_chunks
+    ):
         """Test sequential calling with actual vector store and multiple searches"""
         # Setup config with proper max results
         test_config.CHROMA_PATH = temp_chroma_path + "_integration"
@@ -362,19 +401,25 @@ class TestRAGSystemSequentialToolCalling:
         rag.vector_store.add_course_content(sample_course_chunks)
 
         # Mock AI generator to simulate sequential tool calling
-        with patch.object(rag.ai_generator, 'generate_response') as mock_gen:
+        with patch.object(rag.ai_generator, "generate_response") as mock_gen:
             call_count = 0
 
-            def mock_sequential_calls(query, conversation_history=None, tools=None, tool_manager=None):
+            def mock_sequential_calls(
+                query, conversation_history=None, tools=None, tool_manager=None
+            ):
                 nonlocal call_count
                 call_count += 1
 
                 # Simulate Claude making multiple tool calls
                 if tool_manager and call_count == 1:
                     # First call: search for "Python"
-                    result1 = tool_manager.execute_tool("search_course_content", query="Python")
+                    result1 = tool_manager.execute_tool(
+                        "search_course_content", query="Python"
+                    )
                     # Simulate seeing result and making second call
-                    result2 = tool_manager.execute_tool("search_course_content", query="variables")
+                    result2 = tool_manager.execute_tool(
+                        "search_course_content", query="variables"
+                    )
                     return f"Based on the searches: {result1[:50]}... and {result2[:50]}..."
 
                 return "Response without tools"
@@ -390,7 +435,9 @@ class TestRAGSystemSequentialToolCalling:
             # Tool manager should have been called
             mock_gen.assert_called_once()
 
-    def test_rag_outline_then_search_pattern(self, test_config, temp_chroma_path, sample_course, sample_course_chunks):
+    def test_rag_outline_then_search_pattern(
+        self, test_config, temp_chroma_path, sample_course, sample_course_chunks
+    ):
         """Test outline→search pattern with sequential calling"""
         # Setup
         test_config.CHROMA_PATH = temp_chroma_path + "_outline_search"
@@ -401,20 +448,29 @@ class TestRAGSystemSequentialToolCalling:
         rag.vector_store.add_course_content(sample_course_chunks)
 
         # Mock AI to simulate outline→search pattern
-        with patch.object(rag.ai_generator, 'generate_response') as mock_gen:
-            def mock_outline_then_search(query, conversation_history=None, tools=None, tool_manager=None):
+        with patch.object(rag.ai_generator, "generate_response") as mock_gen:
+
+            def mock_outline_then_search(
+                query, conversation_history=None, tools=None, tool_manager=None
+            ):
                 if tool_manager:
                     # First get outline
-                    outline = tool_manager.execute_tool("get_course_outline", course_title="Introduction to Python")
+                    outline = tool_manager.execute_tool(
+                        "get_course_outline", course_title="Introduction to Python"
+                    )
                     # Then search based on outline
-                    content = tool_manager.execute_tool("search_course_content", query="Python", lesson_number=1)
+                    content = tool_manager.execute_tool(
+                        "search_course_content", query="Python", lesson_number=1
+                    )
                     return f"The course has these lessons: {outline}. Lesson 1 content: {content[:100]}..."
                 return "No tools used"
 
             mock_gen.side_effect = mock_outline_then_search
 
             # Execute
-            response, sources = rag.query("What lessons are in Python course and tell me about lesson 1?")
+            response, sources = rag.query(
+                "What lessons are in Python course and tell me about lesson 1?"
+            )
 
             # Verify
             assert isinstance(response, str)

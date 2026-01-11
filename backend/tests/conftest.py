@@ -1,21 +1,22 @@
 """
 Pytest fixtures for RAG system testing
 """
-import pytest
-import sys
+
 import os
-from unittest.mock import Mock, MagicMock
-import tempfile
 import shutil
+import sys
+import tempfile
+from unittest.mock import Mock
+
+import pytest
 
 # Add backend directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models import Course, Lesson, CourseChunk
-from vector_store import VectorStore, SearchResults
-from search_tools import CourseSearchTool, ToolManager
-from ai_generator import AIGenerator
-from rag_system import RAGSystem
+from ai_generator import AIGenerator  # noqa: E402
+from models import Course, CourseChunk, Lesson  # noqa: E402
+from search_tools import CourseSearchTool, ToolManager  # noqa: E402
+from vector_store import SearchResults, VectorStore  # noqa: E402
 
 
 @pytest.fixture
@@ -26,10 +27,22 @@ def sample_course():
         course_link="https://example.com/python",
         instructor="John Doe",
         lessons=[
-            Lesson(lesson_number=1, title="Getting Started", lesson_link="https://example.com/python/lesson1"),
-            Lesson(lesson_number=2, title="Variables and Types", lesson_link="https://example.com/python/lesson2"),
-            Lesson(lesson_number=3, title="Control Flow", lesson_link="https://example.com/python/lesson3")
-        ]
+            Lesson(
+                lesson_number=1,
+                title="Getting Started",
+                lesson_link="https://example.com/python/lesson1",
+            ),
+            Lesson(
+                lesson_number=2,
+                title="Variables and Types",
+                lesson_link="https://example.com/python/lesson2",
+            ),
+            Lesson(
+                lesson_number=3,
+                title="Control Flow",
+                lesson_link="https://example.com/python/lesson3",
+            ),
+        ],
     )
 
 
@@ -41,20 +54,20 @@ def sample_course_chunks(sample_course):
             content="Lesson 1 content: Python is a high-level programming language. It is widely used for web development, data science, and automation.",
             course_title=sample_course.title,
             lesson_number=1,
-            chunk_index=0
+            chunk_index=0,
         ),
         CourseChunk(
             content="Variables in Python are created when you assign a value to them. Python is dynamically typed, meaning you don't need to declare variable types.",
             course_title=sample_course.title,
             lesson_number=2,
-            chunk_index=1
+            chunk_index=1,
         ),
         CourseChunk(
             content="Control flow in Python includes if statements, for loops, and while loops. These allow you to control the execution flow of your program.",
             course_title=sample_course.title,
             lesson_number=3,
-            chunk_index=2
-        )
+            chunk_index=2,
+        ),
     ]
 
 
@@ -75,13 +88,15 @@ def mock_vector_store():
     # Setup default return values
     mock.search.return_value = SearchResults(
         documents=["Sample content from Python course"],
-        metadata=[{
-            "course_title": "Introduction to Python",
-            "lesson_number": 1,
-            "chunk_index": 0
-        }],
+        metadata=[
+            {
+                "course_title": "Introduction to Python",
+                "lesson_number": 1,
+                "chunk_index": 0,
+            }
+        ],
         distances=[0.5],
-        error=None
+        error=None,
     )
 
     mock._resolve_course_name.return_value = "Introduction to Python"
@@ -130,6 +145,7 @@ def ai_generator_with_mock(mock_anthropic_client):
 @pytest.fixture
 def test_config():
     """Create a test configuration"""
+
     class TestConfig:
         ANTHROPIC_API_KEY = "test_key"
         ANTHROPIC_MODEL = "claude-sonnet-4-20250514"

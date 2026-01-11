@@ -9,10 +9,9 @@ These tests verify:
 5. Empty results handling
 6. Source tracking
 """
-import pytest
-from unittest.mock import Mock
+
+from search_tools import ToolManager  # noqa: F401
 from vector_store import SearchResults
-from search_tools import CourseSearchTool, ToolManager
 
 
 class TestCourseSearchToolExecute:
@@ -30,14 +29,14 @@ class TestCourseSearchToolExecute:
         assert isinstance(result, str)
         assert len(result) > 0
         mock_vector_store.search.assert_called_once_with(
-            query=query,
-            course_name=None,
-            lesson_number=None
+            query=query, course_name=None, lesson_number=None
         )
         # Check that result contains the course title in header format
         assert "[Introduction to Python" in result
 
-    def test_execute_with_course_name_filter(self, course_search_tool, mock_vector_store):
+    def test_execute_with_course_name_filter(
+        self, course_search_tool, mock_vector_store
+    ):
         """Test search with course name filtering"""
         # Setup
         query = "variables"
@@ -48,9 +47,7 @@ class TestCourseSearchToolExecute:
 
         # Assert
         mock_vector_store.search.assert_called_once_with(
-            query=query,
-            course_name=course_name,
-            lesson_number=None
+            query=query, course_name=course_name, lesson_number=None
         )
         assert isinstance(result, str)
 
@@ -65,9 +62,7 @@ class TestCourseSearchToolExecute:
 
         # Assert
         mock_vector_store.search.assert_called_once_with(
-            query=query,
-            course_name=None,
-            lesson_number=lesson_number
+            query=query, course_name=None, lesson_number=lesson_number
         )
         assert isinstance(result, str)
 
@@ -79,27 +74,20 @@ class TestCourseSearchToolExecute:
         lesson_number = 2
 
         # Execute
-        result = course_search_tool.execute(
-            query=query,
-            course_name=course_name,
-            lesson_number=lesson_number
+        _result = course_search_tool.execute(  # noqa: F841
+            query=query, course_name=course_name, lesson_number=lesson_number
         )
 
         # Assert
         mock_vector_store.search.assert_called_once_with(
-            query=query,
-            course_name=course_name,
-            lesson_number=lesson_number
+            query=query, course_name=course_name, lesson_number=lesson_number
         )
 
     def test_execute_handles_empty_results(self, course_search_tool, mock_vector_store):
         """Test that empty results return appropriate message"""
         # Setup
         mock_vector_store.search.return_value = SearchResults(
-            documents=[],
-            metadata=[],
-            distances=[],
-            error=None
+            documents=[], metadata=[], distances=[], error=None
         )
 
         # Execute
@@ -108,14 +96,13 @@ class TestCourseSearchToolExecute:
         # Assert
         assert "No relevant content found" in result
 
-    def test_execute_handles_empty_results_with_course_filter(self, course_search_tool, mock_vector_store):
+    def test_execute_handles_empty_results_with_course_filter(
+        self, course_search_tool, mock_vector_store
+    ):
         """Test empty results message includes filter information"""
         # Setup
         mock_vector_store.search.return_value = SearchResults(
-            documents=[],
-            metadata=[],
-            distances=[],
-            error=None
+            documents=[], metadata=[], distances=[], error=None
         )
 
         # Execute
@@ -140,10 +127,12 @@ class TestCourseSearchToolExecute:
     def test_execute_tracks_sources(self, course_search_tool, mock_vector_store):
         """Test that sources are tracked after search"""
         # Setup - mock with lesson link available
-        mock_vector_store.get_lesson_link.return_value = "https://example.com/python/lesson1"
+        mock_vector_store.get_lesson_link.return_value = (
+            "https://example.com/python/lesson1"
+        )
 
         # Execute
-        result = course_search_tool.execute(query="Python")
+        _result = course_search_tool.execute(query="Python")  # noqa: F841
 
         # Assert
         assert len(course_search_tool.last_sources) > 0
@@ -152,18 +141,22 @@ class TestCourseSearchToolExecute:
         assert "url" in source
         assert "Introduction to Python" in source["text"]
 
-    def test_execute_formats_results_correctly(self, course_search_tool, mock_vector_store):
+    def test_execute_formats_results_correctly(
+        self, course_search_tool, mock_vector_store
+    ):
         """Test that results are formatted with proper headers and content"""
         # Setup
         mock_vector_store.search.return_value = SearchResults(
             documents=["This is lesson content about variables"],
-            metadata=[{
-                "course_title": "Introduction to Python",
-                "lesson_number": 2,
-                "chunk_index": 0
-            }],
+            metadata=[
+                {
+                    "course_title": "Introduction to Python",
+                    "lesson_number": 2,
+                    "chunk_index": 0,
+                }
+            ],
             distances=[0.3],
-            error=None
+            error=None,
         )
 
         # Execute
@@ -177,16 +170,21 @@ class TestCourseSearchToolExecute:
         """Test handling of multiple search results"""
         # Setup
         mock_vector_store.search.return_value = SearchResults(
-            documents=[
-                "First result about Python",
-                "Second result about Python"
-            ],
+            documents=["First result about Python", "Second result about Python"],
             metadata=[
-                {"course_title": "Introduction to Python", "lesson_number": 1, "chunk_index": 0},
-                {"course_title": "Introduction to Python", "lesson_number": 2, "chunk_index": 1}
+                {
+                    "course_title": "Introduction to Python",
+                    "lesson_number": 1,
+                    "chunk_index": 0,
+                },
+                {
+                    "course_title": "Introduction to Python",
+                    "lesson_number": 2,
+                    "chunk_index": 1,
+                },
             ],
             distances=[0.2, 0.4],
-            error=None
+            error=None,
         )
 
         # Execute
@@ -218,10 +216,7 @@ class TestToolManager:
 
     def test_tool_manager_executes_tool(self, tool_manager, mock_vector_store):
         """Test that ToolManager can execute registered tools"""
-        result = tool_manager.execute_tool(
-            "search_course_content",
-            query="Python"
-        )
+        result = tool_manager.execute_tool("search_course_content", query="Python")
 
         assert isinstance(result, str)
         assert len(result) > 0

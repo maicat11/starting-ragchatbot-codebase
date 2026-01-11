@@ -10,9 +10,8 @@ These tests verify:
 6. Message history accumulation
 7. Tool availability across rounds
 """
-import pytest
+
 from unittest.mock import Mock
-from ai_generator import AIGenerator
 
 
 class TestSequentialToolCalling:
@@ -37,8 +36,8 @@ class TestSequentialToolCalling:
 
         # Configure mock to return responses in sequence
         mock_anthropic_client.messages.create.side_effect = [
-            tool_response,      # Round 1: tool use
-            final_response      # Round 1: response after tool
+            tool_response,  # Round 1: tool use
+            final_response,  # Round 1: response after tool
         ]
 
         # Mock tool manager
@@ -49,9 +48,7 @@ class TestSequentialToolCalling:
 
         # Execute
         response = ai_generator_with_mock.generate_response(
-            query="What is Python?",
-            tools=tools,
-            tool_manager=mock_tool_manager
+            query="What is Python?", tools=tools, tool_manager=mock_tool_manager
         )
 
         # Assert
@@ -60,7 +57,9 @@ class TestSequentialToolCalling:
         assert mock_anthropic_client.messages.create.call_count == 2
         assert mock_tool_manager.execute_tool.call_count == 1
 
-    def test_two_round_sequential_tool_use(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_two_round_sequential_tool_use(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Verify Claude can call tools twice sequentially"""
         # Round 1: Tool use for course outline
         round1_response = Mock()
@@ -85,20 +84,24 @@ class TestSequentialToolCalling:
         # Final response after tools
         final_response = Mock()
         final_response.stop_reason = "end_turn"
-        final_response.content = [Mock(text="The Python course has 5 lessons. Lesson 2 covers variables and data types.")]
+        final_response.content = [
+            Mock(
+                text="The Python course has 5 lessons. Lesson 2 covers variables and data types."
+            )
+        ]
 
         # Configure mock to return responses in sequence
         mock_anthropic_client.messages.create.side_effect = [
             round1_response,  # Round 1: get outline
             round2_response,  # Round 2: search content
-            final_response    # Final: answer
+            final_response,  # Final: answer
         ]
 
         # Mock tool manager
         mock_tool_manager = Mock()
         mock_tool_manager.execute_tool.side_effect = [
             "Course outline: Lesson 1, Lesson 2, Lesson 3, Lesson 4, Lesson 5",
-            "Lesson 2 content: Variables are containers for storing data values..."
+            "Lesson 2 content: Variables are containers for storing data values...",
         ]
 
         tools = [{"name": "get_course_outline"}, {"name": "search_course_content"}]
@@ -107,13 +110,15 @@ class TestSequentialToolCalling:
         response = ai_generator_with_mock.generate_response(
             query="What lessons are in Python course and tell me about variables?",
             tools=tools,
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Assert
         assert isinstance(response, str)
         assert "lesson" in response.lower() or "variable" in response.lower()
-        assert mock_anthropic_client.messages.create.call_count == 3  # 2 tool rounds + 1 final
+        assert (
+            mock_anthropic_client.messages.create.call_count == 3
+        )  # 2 tool rounds + 1 final
         assert mock_tool_manager.execute_tool.call_count == 2
 
     def test_max_rounds_enforced(self, ai_generator_with_mock, mock_anthropic_client):
@@ -135,7 +140,7 @@ class TestSequentialToolCalling:
         mock_anthropic_client.messages.create.side_effect = [
             tool_response,  # Round 1
             tool_response,  # Round 2
-            final_response  # Final call without tools
+            final_response,  # Final call without tools
         ]
 
         mock_tool_manager = Mock()
@@ -144,7 +149,7 @@ class TestSequentialToolCalling:
         response = ai_generator_with_mock.generate_response(
             query="Test",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Should call API 3 times: 2 tool rounds + 1 final without tools
@@ -152,7 +157,9 @@ class TestSequentialToolCalling:
         assert mock_tool_manager.execute_tool.call_count == 2
         assert isinstance(response, str)
 
-    def test_natural_termination_after_first_tool(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_natural_termination_after_first_tool(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Verify loop exits when Claude doesn't use tools in second response"""
         # Round 1: Tool use
         tool_response = Mock()
@@ -170,8 +177,8 @@ class TestSequentialToolCalling:
         text_response.content = [Mock(text="Python is a programming language")]
 
         mock_anthropic_client.messages.create.side_effect = [
-            tool_response,   # Round 1
-            text_response    # Round 2 - natural termination
+            tool_response,  # Round 1
+            text_response,  # Round 2 - natural termination
         ]
 
         mock_tool_manager = Mock()
@@ -180,7 +187,7 @@ class TestSequentialToolCalling:
         response = ai_generator_with_mock.generate_response(
             query="What is Python?",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Should only call API twice (tool + response)
@@ -188,7 +195,9 @@ class TestSequentialToolCalling:
         assert mock_tool_manager.execute_tool.call_count == 1
         assert "Python" in response
 
-    def test_early_termination_no_tool_use(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_early_termination_no_tool_use(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Verify early termination when AI doesn't use tools"""
         # First call: direct answer, no tools
         direct_response = Mock()
@@ -200,14 +209,16 @@ class TestSequentialToolCalling:
         response = ai_generator_with_mock.generate_response(
             query="What is 2+2?",
             tools=[{"name": "search_course_content"}],
-            tool_manager=Mock()
+            tool_manager=Mock(),
         )
 
         # Should only call once - no tools used
         assert mock_anthropic_client.messages.create.call_count == 1
         assert "4" in response
 
-    def test_tool_error_terminates_sequence(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_tool_error_terminates_sequence(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Verify tool errors prevent further rounds"""
         # Round 1: Tool use
         tool_response = Mock()
@@ -223,12 +234,14 @@ class TestSequentialToolCalling:
 
         # Tool manager raises exception
         mock_tool_manager = Mock()
-        mock_tool_manager.execute_tool.side_effect = Exception("Database connection failed")
+        mock_tool_manager.execute_tool.side_effect = Exception(
+            "Database connection failed"
+        )
 
         response = ai_generator_with_mock.generate_response(
             query="Test",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Should return error message
@@ -237,13 +250,16 @@ class TestSequentialToolCalling:
         # Should not make additional API calls after error
         assert mock_anthropic_client.messages.create.call_count == 1
 
-    def test_message_history_accumulates_correctly(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_message_history_accumulates_correctly(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Verify message array grows correctly across rounds"""
         # Track all API calls with deep copy of messages to verify message history
         api_calls = []
 
         def capture_call(**kwargs):
             import copy
+
             # Deep copy messages to capture state at call time
             call_record = kwargs.copy()
             call_record["messages"] = copy.deepcopy(kwargs["messages"])
@@ -284,9 +300,7 @@ class TestSequentialToolCalling:
         mock_tool_manager.execute_tool.return_value = "Result"
 
         ai_generator_with_mock.generate_response(
-            query="Test",
-            tools=[{"name": "search"}],
-            tool_manager=mock_tool_manager
+            query="Test", tools=[{"name": "search"}], tool_manager=mock_tool_manager
         )
 
         # Verify message history growth
@@ -306,7 +320,9 @@ class TestSequentialToolCalling:
         # (user + assistant + user + assistant + user)
         assert len(api_calls[2]["messages"]) == 5
 
-    def test_tools_available_in_each_round(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_tools_available_in_each_round(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Verify tools param present in all round API calls"""
         # Track API calls
         api_calls = []
@@ -339,9 +355,7 @@ class TestSequentialToolCalling:
         tools = [{"name": "search"}]
 
         ai_generator_with_mock.generate_response(
-            query="Test",
-            tools=tools,
-            tool_manager=mock_tool_manager
+            query="Test", tools=tools, tool_manager=mock_tool_manager
         )
 
         # Both round 1 and round 2 should have tools
@@ -353,7 +367,9 @@ class TestSequentialToolCalling:
         # Final call (after max rounds) should NOT have tools
         assert "tools" not in api_calls[2]
 
-    def test_no_tools_provided_returns_direct_response(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_no_tools_provided_returns_direct_response(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Verify behavior when no tools given"""
         # Setup: direct response
         direct_response = Mock()
@@ -364,9 +380,7 @@ class TestSequentialToolCalling:
 
         # Call without tools
         response = ai_generator_with_mock.generate_response(
-            query="What is 2+2?",
-            tools=None,
-            tool_manager=None
+            query="What is 2+2?", tools=None, tool_manager=None
         )
 
         # Should get direct response

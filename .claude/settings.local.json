@@ -7,7 +7,14 @@
       "mcp__playwright__browser_snapshot",
       "Bash(find:*)",
       "Bash(uv run pytest:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv run black:*)",
+      "Bash(uv run isort:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/quality-check.sh:*)",
+      "Bash(./scripts/format.sh:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

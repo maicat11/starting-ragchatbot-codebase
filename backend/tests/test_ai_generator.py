@@ -8,20 +8,21 @@ These tests verify:
 4. Response formatting after tool use
 5. Conversation history handling
 """
-import pytest
-from unittest.mock import Mock, MagicMock, call
+
+from unittest.mock import Mock
+
 from ai_generator import AIGenerator
 
 
 class TestAIGeneratorToolCalling:
     """Test suite for AIGenerator tool calling capabilities"""
 
-    def test_generate_response_without_tools(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_generate_response_without_tools(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Test basic response generation without tools"""
         # Execute
-        response = ai_generator_with_mock.generate_response(
-            query="What is Python?"
-        )
+        response = ai_generator_with_mock.generate_response(query="What is Python?")
 
         # Assert
         assert isinstance(response, str)
@@ -32,23 +33,26 @@ class TestAIGeneratorToolCalling:
         call_kwargs = mock_anthropic_client.messages.create.call_args[1]
         assert "tools" not in call_kwargs
 
-    def test_generate_response_with_tools_but_no_use(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_generate_response_with_tools_but_no_use(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Test response generation with tools available but not used"""
         # Setup
-        tools = [{
-            "name": "search_course_content",
-            "description": "Search course materials",
-            "input_schema": {
-                "type": "object",
-                "properties": {"query": {"type": "string"}},
-                "required": ["query"]
+        tools = [
+            {
+                "name": "search_course_content",
+                "description": "Search course materials",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                    "required": ["query"],
+                },
             }
-        }]
+        ]
 
         # Execute
         response = ai_generator_with_mock.generate_response(
-            query="What is 2+2?",
-            tools=tools
+            query="What is 2+2?", tools=tools
         )
 
         # Assert
@@ -61,7 +65,9 @@ class TestAIGeneratorToolCalling:
         assert call_kwargs["tools"] == tools
         assert call_kwargs["tool_choice"] == {"type": "auto"}
 
-    def test_generate_response_with_tool_use(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_generate_response_with_tool_use(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Test response generation when AI decides to use a tool"""
         # Setup - mock initial response with tool use
         initial_response = Mock()
@@ -78,21 +84,28 @@ class TestAIGeneratorToolCalling:
 
         # Mock final response after tool execution
         final_response = Mock()
-        final_response.content = [Mock(text="Based on the search, Python is a programming language.")]
+        final_response.content = [
+            Mock(text="Based on the search, Python is a programming language.")
+        ]
 
         # Configure mock to return different responses on subsequent calls
-        mock_anthropic_client.messages.create.side_effect = [initial_response, final_response]
+        mock_anthropic_client.messages.create.side_effect = [
+            initial_response,
+            final_response,
+        ]
 
         # Setup tools
-        tools = [{
-            "name": "search_course_content",
-            "description": "Search course materials",
-            "input_schema": {
-                "type": "object",
-                "properties": {"query": {"type": "string"}},
-                "required": ["query"]
+        tools = [
+            {
+                "name": "search_course_content",
+                "description": "Search course materials",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                    "required": ["query"],
+                },
             }
-        }]
+        ]
 
         # Create mock tool manager
         mock_tool_manager = Mock()
@@ -100,9 +113,7 @@ class TestAIGeneratorToolCalling:
 
         # Execute
         response = ai_generator_with_mock.generate_response(
-            query="What is Python?",
-            tools=tools,
-            tool_manager=mock_tool_manager
+            query="What is Python?", tools=tools, tool_manager=mock_tool_manager
         )
 
         # Assert
@@ -115,7 +126,9 @@ class TestAIGeneratorToolCalling:
         # Verify tool was executed
         mock_tool_manager.execute_tool.assert_called_once()
 
-    def test_handle_tool_execution_flow(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_handle_tool_execution_flow(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Test the complete tool execution flow with new _execute_and_append_tools method"""
         # Setup
         response = Mock()
@@ -138,29 +151,27 @@ class TestAIGeneratorToolCalling:
 
         # Execute the private method directly
         result = ai_generator_with_mock._execute_and_append_tools(
-            response,
-            messages,
-            mock_tool_manager
+            response, messages, mock_tool_manager
         )
 
         # Assert
         assert result is None  # Success returns None
         mock_tool_manager.execute_tool.assert_called_once_with(
-            "search_course_content",
-            query="variables in Python"
+            "search_course_content", query="variables in Python"
         )
         # Verify messages were appended
         assert len(messages) == 3  # original + assistant response + tool results
 
-    def test_conversation_history_included(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_conversation_history_included(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Test that conversation history is properly included"""
         # Setup
         history = "User: Hello\nAssistant: Hi there!"
 
         # Execute
-        response = ai_generator_with_mock.generate_response(
-            query="What is Python?",
-            conversation_history=history
+        _response = ai_generator_with_mock.generate_response(  # noqa: F841
+            query="What is Python?", conversation_history=history
         )
 
         # Assert
@@ -176,7 +187,9 @@ class TestAIGeneratorToolCalling:
         assert "tool" in system_prompt.lower() or "Tool" in system_prompt
         assert "search" in system_prompt.lower() or "Search" in system_prompt
 
-    def test_multiple_tool_calls_in_response(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_multiple_tool_calls_in_response(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Test handling of multiple tool calls in a single response with new method"""
         # Setup - mock response with multiple tool use blocks
         response = Mock()
@@ -205,9 +218,7 @@ class TestAIGeneratorToolCalling:
 
         # Execute
         result = ai_generator_with_mock._execute_and_append_tools(
-            response,
-            messages,
-            mock_tool_manager
+            response, messages, mock_tool_manager
         )
 
         # Assert - both tools should be executed
@@ -215,7 +226,9 @@ class TestAIGeneratorToolCalling:
         assert result is None  # Success
         assert len(messages) == 3  # original + assistant response + tool results
 
-    def test_api_parameters_correct(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_api_parameters_correct(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Test that API parameters are correctly set"""
         # Execute
         ai_generator_with_mock.generate_response(query="Test query")
@@ -230,7 +243,9 @@ class TestAIGeneratorToolCalling:
         assert len(call_kwargs["messages"]) == 1
         assert call_kwargs["messages"][0]["role"] == "user"
 
-    def test_tool_use_without_tool_manager_returns_text(self, ai_generator_with_mock, mock_anthropic_client):
+    def test_tool_use_without_tool_manager_returns_text(
+        self, ai_generator_with_mock, mock_anthropic_client
+    ):
         """Test that tool_use without tool_manager still returns gracefully"""
         # Setup - mock response indicating tool use but no manager provided
         initial_response = Mock()
@@ -243,9 +258,7 @@ class TestAIGeneratorToolCalling:
 
         # Execute without tool_manager
         response = ai_generator_with_mock.generate_response(
-            query="Test",
-            tools=tools,
-            tool_manager=None
+            query="Test", tools=tools, tool_manager=None
         )
 
         # Should return the text from the response
@@ -266,6 +279,6 @@ class TestAIGeneratorConfiguration:
 
     def test_system_prompt_is_static(self):
         """Test that SYSTEM_PROMPT is defined at class level"""
-        assert hasattr(AIGenerator, 'SYSTEM_PROMPT')
+        assert hasattr(AIGenerator, "SYSTEM_PROMPT")
         assert isinstance(AIGenerator.SYSTEM_PROMPT, str)
         assert len(AIGenerator.SYSTEM_PROMPT) > 0
