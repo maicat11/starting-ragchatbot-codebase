@@ -28,8 +28,13 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
-    
-    
+
+    // New chat button
+    document.getElementById('newChatButton').addEventListener('click', () => {
+        createNewSession();
+        chatInput.focus();
+    });
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -122,16 +127,16 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
-        // Build clickable source links
+        // Build clickable source links as styled badges
         const sourceLinks = sources.map(source => {
             if (source.url) {
-                // Clickable link that opens in new tab
-                return `<a href="${source.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.text)}</a>`;
+                // Clickable link badge that opens in new tab
+                return `<a href="${source.url}" target="_blank" rel="noopener noreferrer" class="source-badge">${escapeHtml(source.text)}</a>`;
             } else {
-                // Plain text if no URL available
-                return escapeHtml(source.text);
+                // Plain text badge if no URL available
+                return `<span class="source-badge">${escapeHtml(source.text)}</span>`;
             }
-        }).join(', ');
+        }).join('');
 
         html += `
             <details class="sources-collapsible">
