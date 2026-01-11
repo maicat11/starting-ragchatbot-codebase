@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, themeToggle;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,10 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
-    
+    themeToggle = document.getElementById('themeToggle');
+
     setupEventListeners();
     createNewSession();
     loadCourseStats();
+    loadThemePreference();
 });
 
 // Event Listeners
@@ -33,6 +35,17 @@ function setupEventListeners() {
     document.getElementById('newChatButton').addEventListener('click', () => {
         createNewSession();
         chatInput.focus();
+    });
+
+    // Theme toggle button
+    themeToggle.addEventListener('click', toggleTheme);
+
+    // Keyboard accessibility for theme toggle
+    themeToggle.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleTheme();
+        }
     });
 
     // Suggested questions
@@ -174,15 +187,15 @@ async function loadCourseStats() {
         console.log('Loading course stats...');
         const response = await fetch(`${API_URL}/courses`);
         if (!response.ok) throw new Error('Failed to load course stats');
-        
+
         const data = await response.json();
         console.log('Course data received:', data);
-        
+
         // Update stats in UI
         if (totalCourses) {
             totalCourses.textContent = data.total_courses;
         }
-        
+
         // Update course titles
         if (courseTitles) {
             if (data.course_titles && data.course_titles.length > 0) {
@@ -193,7 +206,7 @@ async function loadCourseStats() {
                 courseTitles.innerHTML = '<span class="no-courses">No courses available</span>';
             }
         }
-        
+
     } catch (error) {
         console.error('Error loading course stats:', error);
         // Set default values on error
@@ -203,5 +216,29 @@ async function loadCourseStats() {
         if (courseTitles) {
             courseTitles.innerHTML = '<span class="error">Failed to load courses</span>';
         }
+    }
+}
+
+// Theme Toggle Functions
+function toggleTheme() {
+    const body = document.body;
+    const isLightTheme = body.classList.toggle('light-theme');
+
+    // Save preference to localStorage
+    localStorage.setItem('theme', isLightTheme ? 'light' : 'dark');
+
+    // Update aria-label for accessibility
+    themeToggle.setAttribute('aria-label', isLightTheme ? 'Switch to dark theme' : 'Switch to light theme');
+}
+
+function loadThemePreference() {
+    const savedTheme = localStorage.getItem('theme');
+
+    // Apply saved theme or default to dark
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        themeToggle.setAttribute('aria-label', 'Switch to dark theme');
+    } else {
+        themeToggle.setAttribute('aria-label', 'Switch to light theme');
     }
 }
